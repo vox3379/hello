@@ -1,0 +1,536 @@
+<!DOCTYPE html> 
+<html> 
+	<head> 
+	<meta charset="utf-8">
+	<title>리스트</title> 
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- jQuery Mobile CSS bits -->
+	<link rel="stylesheet"  href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
+	<link rel="stylesheet" href="/jqm-docs.css"/>
+	
+	<!-- Javascript includes -->
+	<script src="http://code.jquery.com/jquery-1.7.2.min.js"></script>
+	<script src="/jqm-docs.js"></script>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.1.1/jquery.mobile-1.1.1.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+
+	<style type="text/css">
+		 #menuDiv {
+		 	width:100%;
+		 	height:80%;
+		 	float:left;
+		 }
+		 #listDiv{
+		 	width:75%;
+		 	height:100%;
+		 	float:right;
+		 }
+		 #titleDiv{
+		 	margin-right:0 !important;
+		 	margin-left:0 !important;
+		 }
+		 #btnDiv{
+		 	width:30px;
+		 }
+		 a{  
+			cursor: pointer;  
+			text-decoration:none;
+			
+		 }
+		#menuDiv2{
+		 	width:100%;
+		 	height:80%;
+		 	float:left;
+		 }
+		 #backgroundPopup{
+		 	display:none;
+			position:fixed;  
+			_position:absolute;  
+			height:100%;
+			width:100%;    
+			top:0;  
+			left:0;  
+			background:#000000;  
+			border:1px solid #cecece;  
+		 }		 
+		 #popupDialog{
+			/*display : none;*/
+			position : absolute;
+			top: 500px;
+		 }
+		 .handle{
+			position: absolute;
+			padding: .2em .5em; 
+			top: 50%; 
+			margin-top: -.9em; 
+			right: 10px;
+		 }
+		 #li-a{
+			wordWrap : true;
+		 }
+		 .ui-li-delete{
+			 position: absolute; left: 8px; top: .7em; max-height: 100px; max-width: 100px; 
+			 width : 20px; height : 20px;
+		 }
+		</style> 
+</head> 
+<body style="overflow-y:hidden"> 
+	<div id='main' data-role='page'>
+		<div id='navDiv' data-role='navbar'>
+			<ul class="tabs">
+				<li id='mp3list'><a  href="#" data-transition='none' class="ui-btn-active">목 록</a></li>
+				<li id='playlist'><a href="#" data-transition='none'>Play List</a></li>
+			</ul>
+		</div>
+	
+		<div id="menuDiv">
+					
+			<div id="titleDiv" data-role='header'>
+
+				<a id="bBtn" href="#" data-role="button" data-icon="arrow-l" data-iconpos="notext" data-inline="true">Previous</a>
+				
+				<h1>목 록</h1>
+				
+				<a id="hBtn" href="#" data-role="button" data-icon="home" data-iconpos="notext" data-inline="true">Home</a>
+	
+			</div>	
+		</div>
+ 	
+	
+		<div id="menuDiv2">
+			<div id="pList" data-role='header'>			
+				<h1>Play List</h1>
+				<a id="optionBtn" href="#" data-rel="popup" data-role="button" data-icon="gear" data-iconpos="notext" data-inline="true">Option</a>
+				<a id="checkBtn" href="#" data-role="button" data-icon="check" data-iconpos="notext" data-inline="true">Add</a>
+			</div>
+		</div>
+	
+
+		<div data-role="content" id="popupDialog">
+			<div data-role="header" data-theme="d" class="ui-corner-top">
+				<h1>Dialog</h1>
+			</div>
+			<div data-role="content" data-theme="d" style="padding:10px;" class="ui-corner-bottom">
+				<a href="#" id='editBtn' data-role="button" data-theme="b" data-inline="false" style="margin:8px">Edit Playlist</a>
+				<a href="#" id='saveBtn' data-role="button" data-theme="b" data-inline="false" style="margin:8px">Save Playlist</a>
+				<a href="#" id='clearBtn' data-role="button" data-theme="b" data-inline="false" style="margin:8px">Clear Playlist</a><p>
+				<a href="#" id='closeBtn' data-role="button" data-theme="d" data-inline="false" style="margin:8px">Cancel</a>
+			</div>
+		</div>
+		<div id="backgroundPopup"></div>
+	</div>
+				
+	 <script>
+	 	var playListArr = new Array();
+		var parentPath = "";
+// 		var path = "c:\\mp3\\";
+		var path = "c://mp3/";
+		var abPath = "";
+		var dirPath = "";
+		var message = "";
+		var popupStatus = 0;
+		var fileName ="";
+		var dirName="";
+		var socket = "";
+		var listStr = "";
+		var tags = "";
+		var _sortList = new Array(); 
+		var optionFlag  = "nonClick";
+
+		$(document).ready(function(){
+			$("#menuDiv2").css("display","none");
+			$("#popupDialog").css("display","none");
+			socket = io.connect();
+			$.callJava(path,"contentDiv","dir");
+			//뒤로가기 버튼
+			$("#bBtn").bind("click",function(){
+				if(abPath == "c:\\mp3\\") return;
+				//var pathStr = parentPath.substring(parentPath.length-1,parentPath.length);
+				var pathStr = abPath.substring(abPath.length-1,abPath.length);
+				if(pathStr == "\\" || pathStr == ":"){
+					$.callJava("c:\\mp3\\","contentDiv",'dir');
+					return;
+				}
+				var lastIndex = abPath.lastIndexOf("\\");
+			 	var backPath = abPath.substring(0,lastIndex);
+
+				abPath = backPath;
+				if(backPath.substring(backPath.length-1,backPath.length) == ":"){
+			 		backPath += "\\";
+			 	}	
+				$.callJava(backPath,"contentDiv","dir");
+			});
+		  // 홈 버튼
+			$('#hBtn').bind('click',function(){
+				parentPath = "";
+				$.callJava("c:\\mp3\\","contentDiv","dir");
+			});	
+		});	
+
+		$.callJava = function (path,appendid,tag){
+			abPath = path;
+			tags = tag;
+
+			if(tags == 'dir'){
+				path = $.trim(path);
+				socket.emit('list',path);	
+			}
+
+			socket.on('list',function (json){		
+				if(json != ""){
+					var dir = json.dir;
+					var	file = json.file;	
+					
+					listStr = "<ul ='id='listUL' data-role='listview' data-insert='true' data-theme='a'>";
+					for(var i = 0; i< dir.length; i++){				
+						listStr += "<li id='ul-li'><a href='#centnetDiv' data-transition='slide'>" + 
+									dir[i] + "<img src='directory.jpg' class='ui-li-icon'/></a></li>";
+					}
+					for(var j = 0; j < file.length; j++){
+						listStr += "<li id='ul-li' data-icon ='false'><a href='#centnetDiv' data-transition='slide'>" + 
+									file[j] + "<img src='mp3.jpg' class='ui-li-icon'/></a></li>";
+					}
+					listStr += "</ul>";
+					dirHandler(path,tag,listStr,"");
+				}else {
+					if(abPath == "c:\\mp3\\") return;
+					var pathStr = abPath.substring(abPath.length-1,abPath.length);
+					if(pathStr == "\\" || pathStr == ":"){
+						$.callJava("c:\\","contentDiv",'dir');
+						return;
+					}
+					var lastIndex = abPath.lastIndexOf("\\");
+					var backPath = abPath.substring(0,lastIndex);
+
+					abPath = backPath;
+					if(backPath.substring(backPath.length-1,backPath.length) == ":"){
+						backPath += "\\";
+					}
+					abPath = backPath;
+				}
+			});
+		}	
+		
+		function dirHandler(path,tag,filenames,msg){
+			var str = ""
+			str = filenames;
+			if(str.length > 0){
+				if(tag == 'dir'){					
+					$('li#ul-li').remove();
+					if(listStr.length > 10){ //디렉토리 리스트
+						dirName ="";
+						$(listStr).insertAfter('#titleDiv').listview();
+					}else {
+						$("<ul><li data-role='list-divider'><a>"+dirName+"</a></li></ul>").insertAfter('#titleDiv').listview();	
+					}
+					$('div .ui-grid-e').remove();
+				}
+			}
+
+			// 디렉토리 클릭 
+			$("li#ul-li").bind('click',function(){	
+				dirName = "\\"+ $(this).text();
+				var str = $(this).text();
+			
+				dirPath = abPath + dirName;
+
+				if(str.indexOf(".") == -1){
+					$.callJava(dirPath,"contentDiv",'dir');
+				}else {
+					addList(str);
+				}
+			});	
+		}		
+	
+		// 탭 선택
+		var flagClick = true;
+		var ab = new Array();
+		$("ul li").bind('click',function(){
+			if($(this).attr("id") == "mp3list"){
+				if(_sortList.length != 0){
+					changeList();
+				}
+				optionFlag = "nonClick";
+				flagClick = true;
+				$('li#li-playlist').remove();
+				playListUL = "<ul data-role='listview' id='sortable' data-split-icon='delete' data-theme='a'>";
+				$("#menuDiv").css("display","");
+				$("#menuDiv2").css("display","none");
+				if(!clickFlag){
+					clickFlag = true;
+					$('#popupDialog').animate({"top": "+=370px"}, "slow").fadeOut(100);
+				}
+			}else if($(this).attr("id") == "playlist") {
+				if(flagClick){
+					$("#menuDiv").css("display","none");
+					$("#menuDiv2").css("display","");
+					flagClick = false;
+					playList();
+				}
+			}
+		});	
+		function changeList(){
+			changeFlag = false;
+			if(playListArr.length == _sortList.length){
+				playListArr = new Array();
+				playListArr = _sortList;
+			}
+		}
+		//노래 선택시 추가 
+		var clickCount = 0;
+		function addList(fileName){
+			var flag = true;
+			
+alert(fileName.length);
+			if(fileName.length > 18){
+				var str = fileName;
+				var a = str.substring(0,str.length/2+6);
+				var b = str.substring(str.length/2+6, str.length);
+				fileName = a +" <br> "+ b;
+			}
+
+			for(var i=0; i < playListArr.length; i++){
+				if(fileName == playListArr[i]){
+					flag = false;
+				}
+			}
+			if(flag){
+				playListArr[clickCount] = fileName;
+				clickCount++;
+			}else {
+				alert("이미 등록된 상태입니다.");
+			}
+		}
+//<a id='delBtn' href='#' rel='"+playListArr[i]+"'>제거</a> http://www.standardicons.com/stock-icons/standard-hand16.gif
+		//playList 생성 
+		var playListUL = "<ul data-role='listview' id='sortable' data-split-icon='delete' data-theme='a'>";
+		function playList(){
+//			for(var z = 0; z < playListArr.length; z++){
+//				var str = playListArr[z];
+//				var a = str.substring(0,str.length/2+4);
+//				var b = str.substring(str.length/2+4, str.length);
+//				playListArr[z] = a +" <br> "+ b;
+//			}
+
+			for(var i =0; i < playListArr.length; i++){
+				playListUL += 
+				"<li id='li-playlist' name='"+i+"' class='sortable-item' data-icon='false' >" +
+				"<img src='minus.png' id='del' class='ui-li-delete' name='"+i+"'><a id='li-a' href='#centnetDiv' data-transition='slide'>" + 
+						playListArr[i] + "</a><a id='delBtn' href='#' rel='"+playListArr[i]+"' class ='"+i+"'>제거</a><img src='list.png' class='handle'></li>";
+			}
+			playListUL += "</ul>";	
+			playListClick(playListUL);
+		}
+		
+		// playList 클릭 시 
+		function playListClick(playListUL){
+			$(playListUL).insertAfter('#pList').listview();
+			$("img#del").css("display","none");
+			$(".handle").css("display","none");
+			if(optionFlag == "delClick"){
+				//optionList("on");
+				clickOption();
+			}else {
+				optionList("non");
+			}
+
+			$('li #li-a').bind('click',function(){
+				if(optionFlag == "onClick") {
+					return;
+				} else if(optionFlag == 'delClick'){
+					alert("play");
+					doneClick();
+					return ;
+				} else { alert("play"); }
+			});
+
+			$('#li-playlist #delBtn').bind('click',function(){
+				clickMp3Name = $(this).attr('rel');
+				optionFlag = "delClick";
+				listDelete();
+			});
+
+			$('img#del').click(function(){
+				var img = $(this).attr('src');
+				var delIndex = $(this).attr('name');
+				var btnIndex = "." + delIndex;
+				
+				if(img == 'minus.png'){
+					$(this).attr('src','minus2.png');
+					$(btnIndex).css("display","");
+					//$(btnIndex).show(200);
+
+				}else {
+					$(this).attr('src','minus.png');
+					$(btnIndex).css("display","none");
+					//$(btnIndex).hide(200);
+				}
+				
+			});
+		}
+
+		function optionList(str){
+			if(str == "on"){
+				
+				$("#li-playlist #delBtn").css("display","none");
+				$("#optionBtn").css("display","none");
+				$("#checkBtn").css("display","");
+			}else if(str == "non"){
+				$("#optionBtn").css("display","");
+				$("#checkBtn").css("display","none");
+				$("#li-playlist #delBtn").css("display","none");
+			}
+		}
+		
+		var clickFlag = true;
+		$('#optionBtn').bind('click',function(){	
+			if(clickFlag){
+				clickFlag = false;
+				$("#popupDialog").css("display","");
+				$('#popupDialog').animate({"top": "-=370px"}, "slow");
+				centerPopup();
+			}else {
+				closePopUp();
+			}
+		});
+		
+		function closePopUp(){
+			clickFlag = true;
+			$('#popupDialog').animate({"top": "+=370px"}, "slow").fadeOut(100);
+		}
+
+		$('#checkBtn').bind('click',function(){
+			doneClick();
+		});
+		
+		//done Click
+		function doneClick(){
+			optionList("non");
+			optionFlag = "nonClick";
+			$("a#li-a").css("padding-left", "");
+			$(".handle").css("display","none");
+			$("img#del").css("display","none");
+			$('#sortable').sortable('disable');	
+			listRefresh();
+		}
+
+		//option Click
+		function clickOption(){
+			$('#sortable').sortable({
+				axis   : 'y',
+				contaninment :'ul',
+				handle : '.handle',
+				cursor : 'move',
+			    opacity: 0.7,
+				update : function(ev,ui){
+					var ids = [];
+					var arrtag = $("li");
+					for(i=0; i<arrtag.length; i++) {
+						var name= $(arrtag[i]).attr("id");
+			 
+						if(name == "li-playlist")
+						ids.push($(arrtag[i]).attr("name"));
+					}
+					fn_Update(ids);
+				}
+			});	
+
+			optionList("on");
+			optionFlag = "onClick";
+			$("a#li-a").css("padding-left", "35px");
+			$("img#del").css("display","");
+			$(".handle").css("display","");
+		}
+
+		//playList 순서 변경 
+		var changeFlag = false;
+		function fn_Update(ids)
+		{	
+			changeFlag = true;
+			var subArr = new Array()
+			for(var i = 0; i<ids.length; i++){
+				subArr[i] = playListArr[ids[i]];
+			}
+			for(var j=0; j<playListArr.length; j++){
+				_sortList[j] = subArr[j];
+			}
+		}
+		
+		// playList 삭제
+		var clickMp3Name = "";
+		function listDelete(){
+			var removeIndex = 0;
+			var arrFlag = false;
+			for(var i=0; i < playListArr.length; i++){
+				if(playListArr[i] == clickMp3Name){
+					arrFlag = true;
+					removeIndex = i;
+				}
+			}
+			if(arrFlag)	{
+				playListArr.splice(removeIndex,1);
+				clickCount--;
+				var arrIndex = "";
+				for(var j=0; j < playListArr.length; j++){
+					if(playListArr[j] == null){
+						for(var x = j; x < playListArr.length-1; x++){
+							playListArr[x] = playListArr[x+1];
+						}
+					}
+				}
+			}
+			listRefresh();
+		}
+		
+		$('a').bind('click',function(){
+			var btn = 	$(this).attr("id");
+			if(btn == "closeBtn"){
+				clickFlag = true;
+				$('#popupDialog').animate({"top": "+=370px"}, "slow").fadeOut(100);
+			}else if(btn == "editBtn"){
+				closePopUp();
+				clickOption();
+			}else if(btn == "saveBtn"){
+				closePopUp();			
+			}else if(btn == "clearBtn"){
+				closePopUp();
+				listClear();
+			}
+		});
+
+		function listClear(){
+			var removeCount = playListArr.length;
+			playListArr.splice(0,playListArr.length);
+			clickCount -= removeCount;
+			listRefresh();
+		}
+		function listRefresh(){
+			$('li#li-playlist').remove();
+			playListUL = "<ul data-role='listview' id='sortable' data-split-icon='delete' data-theme='a'>";
+			if(changeFlag) {
+				for(var i=0; i <playListArr.length; i++){
+					playListArr[i] = _sortList[i]; 
+				}
+			}
+			playList();		
+		}
+
+		function centerPopup(){
+			var windowWidth = document.documentElement.clientWidth;  
+			var windowHeight = document.documentElement.clientHeight;  
+
+			$("#popupDialog").css({  
+				"position": "absolute",
+				"margin-left" : -5,
+				"width" : (windowWidth),
+				"left" : -10,
+				"z-index" : 1 
+			});  
+		}
+
+ </script>
+</body>
+</html>
+

@@ -1,0 +1,292 @@
+﻿<!DOCTYPE html> 
+<html> 
+	<head> 
+	<meta charset="utf-8">
+	<title>리스트</title> 
+	<meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.0/jquery.mobile-1.0.min.css" />
+	<script src="http://code.jquery.com/jquery-1.6.4.min.js"></script>
+	<script src="jquery.min.js" type="text/javascript"> </script>
+	<script src="jquery.fixedtableheader.min.js" type="text/javascript"> </script> 	
+	<script src="http://code.jquery.com/mobile/1.0/jquery.mobile-1.0.min.js"></script>
+	
+	
+ 	<script>
+		$(document).ready(function(){
+			$.callJava(path,"contentDiv","root");
+			//뒤로가기 버튼
+			$("#pBtn").bind("click",function(){
+				if(parentPath2 == "") return;
+				
+				var pathStr = parentPath2.substring(parentPath2.length-1,parentPath2.length);
+				if(pathStr == "\\" || pathStr == ":"){
+					$.callJava("","contentDiv",'btn');
+					return;
+				}
+				var lastIndex = parentPath2.lastIndexOf("\\");
+			 	var backPath = parentPath2.substring(0,lastIndex);
+
+				parentPath2 = backPath;
+				if(backPath.substring(backPath.length-1,backPath.length) == ":"){
+			 		backPath += "\\";
+			 	}
+				$.callJava(backPath,"contentDiv","root");
+			});
+		
+		  // 홈 버튼
+			$('#hBtn').bind('click',function(){
+				parentPath = "";
+				$('#span').text(parentPath);
+				$.callJava("","contentDiv","root");
+			});	
+					
+		});
+ 	</script>
+	<style type="text/css">
+		/*.ui-header .ui-title, .ui-footer .ui-title { margin-right: 0 !important; margin-left: 0 !important; }*/
+		 #menuDiv{
+		 	width:25%;
+		 	height:500px;
+		 	/*border:#A9A9A9 solid 1px;*/
+		 	float:left;
+		 }
+		 #listDiv{
+		 	width:75%;
+		 	height:500px;
+		 /*	border:#A9A9A9 solid 1px; */
+		 	float:right;
+		 /*	overflow-y:auto; */
+		 }
+		 #titleDiv{
+		 	background:#333300;
+		 	color:#F5F5F5;
+		 	text-align:center;
+		 	/*height:60px;*/
+		 	overflow-y:auto;
+		 };		 	
+		 #btnDiv{
+		 	width:25px;
+		 }
+		 #popupContact{
+			display:none;  
+			position:fixed;  
+			/*_position:absolute;*/
+			height:800px;  
+			width:800px;  
+			background:#FFFFFF;  
+			border:2px solid #cecece;  
+			z-index:2;  
+			padding:12px;  
+			font-size:13px; 
+			/*	white-space:nowrap;*/
+		 }
+		 #backgroundPopup{
+		 	display:none;
+			position:fixed;  
+			_position:absolute;  
+			height:100%;
+			width:100%;    
+			top:0;  
+			left:0;  
+		/*	background:#000000; */  
+			border:1px solid #cecece;  
+			z-index:1; 		 	
+		 }
+		 #popupContactClose{
+			font-size:20px;  
+			line-height:8px;  
+			right:20px;  
+			top:10px;  
+			position:absolute;
+			/*color:#6fa5fd;*/ 
+			color:#CC0000; 
+			font-weight:700;  
+			display:block; 
+		 }
+		 a{  
+			cursor: pointer;  
+			text-decoration:none;
+		 }
+		 .gridCSS{
+			height : 600px;
+		 	overflow-y:auto;
+		 }
+	     .popCSS{
+	     	top : 20px;
+	     	height : 800px;
+	     	overflow-y:auto;
+	     }
+	</style> 
+</head> 
+<body style="overflow-y:hidden"> 
+<!--<form method='post'>-->
+	<div class='rootDiv' data-role='page' data-fullscreen='true'> 
+		<div id="menuDiv">
+			<div id="titleDiv" data-role='header'  data-fullscreen='true' data-position='fixed'> 
+				<a id="pBtn" href="#" data-role="button" data-icon="arrow-l" data-iconpos="notext" data-inline="true">Previous</a>
+				<h1>목 록</h1>
+			    <a id="hBtn" href="#" data-role="button" data-icon="home" data-iconpos="notext" data-inline="true">Home</a>
+			    <span id='span' style="font-align:center"></span>
+				<img src='folder.jpg'/>
+			</div>
+			<div id="contentDiv">
+				<ul data-role='listview' data-theme='e'></ul>
+			</div>
+		</div>
+ 		<div id="listDiv">
+			<div id="titleDiv1" data-role='header' data-fullscreen='true' data-position='fixed'>
+				<h1>파 일 목 록</h1>
+			</div>			
+			<br>
+			<div class="ui-grid-d" style="text-align:center"> 
+				<div class="ui-grid-e" data-role='content'>
+				</div>
+			</div>
+		</div>
+	</div>	
+	
+     <div id="popupContact" data-role='dialog'>  
+        <!-- <a id="popupContactClose">x</a> -->
+        <div data-role='header' data-position='fixed'>
+        	<a href='#' id='popupContactClose' data-role="button" data-icon="arrow-l" data-iconpos="notext" data-inline="true">닫기</a><br><br>
+        </div>
+        <div id="puContent"></div>
+    </div>  
+    <div id="backgroundPopup"></div> 
+		
+<!--</form>-->
+	 <script>
+	 	
+		var parentPath = "";
+ 		var parentPath2 = "";
+ 		var path = "";
+		var popupStatus = 0;
+		var fileName ="";
+		var dirName="";
+		
+		$.callJava = function (path,appendid,tag){
+			var requestid = "#"+appendid;
+			
+			if( path == "") $('#span').text("My Computer");	
+			else $('#span').text(path).wrap('true');	
+			
+			var titleHi = $('#titleDiv').height();
+			$('#titleDiv1').height(titleHi);
+			$.ajax({
+				  type: "post",
+				  url: "DirectoryServlet",
+				  data: "dirName=" + path,
+				  success: function(html){
+				  			var str = ""
+				  			str = html;
+				  			if(str.length > 0){
+				  				if(tag == 'file'){ //파일 클릭 시  popUp
+				  					centerPopup();
+				  					loadPopup();
+				  					//$("<br><h1>"+fileName+"</h1><br>").insertAfter('#popupContactClose');
+				  					$(requestid).append("<div id='popupContent' data-theme='c'>"+str+"</div>").addClass('popCSS');
+				  					//$(requestid).append("<br><div id='popupContent' data-theme='c'>"+str+"</div>");
+				  					
+				  				}
+					  			var arr = str.split("&&&");
+								if(tag != 'file'){
+						 			$('li').remove();
+						  			if(arr[0].length > 94){ //디렉토리 리스트
+						  					dirName ="";
+							  				//$(arr[0]).insertAfter('#titleDiv').addClass('gridCSS').listview();
+							  				$(arr[0]).insertAfter('#titleDiv').addClass('gridCSS').listview({inset : true});
+						  			}else {
+					  					$("<ul  data-inset='true'><li data-icon='false'><a rel='del'>"+dirName+"</a></li></ul>").insertAfter('#titleDiv').listview().addClass('gridCSS');
+						  			}
+						  			$('div .ui-grid-e').remove();
+								}
+					  			//if(tag != 'file')  //파일리스트
+					  			if(str.search("&&&")!=-1) {
+					  				$('.ui-grid-d').append("<div class='ui-grid-e' data-role='content'></div>");
+					  				$('.ui-grid-e').addClass('gridCSS').append(arr[1]);
+					  			}
+				  			}else {
+				  				if(str == '<ul>'){
+				  					dirName = "";
+				  				}
+				  			}	  			 
+				  			
+				  			// 디렉토리 클릭 
+				    		$("li a").bind('click',function(){
+						 		parentPath = $(this).attr("rel");
+								if(parentPath == "del") {
+									return;
+								}	
+						 		parentPath = parentPath.replace(/#/g," ");					 		
+								parentPath2 = parentPath;
+						 		dirName = $(this).text();
+							//	var valId  = $(this).attr("id");
+								$.callJava(parentPath,"contentDiv",'dir');
+							});
+							
+							//파일 클릭
+							$('.ui-block-a a').bind("click",function(){
+								fileName = $(this).text();
+								var filePath = $(this).attr("rel");
+								filePath = filePath.replace(/#/g," ");
+								$.callJava(filePath,"puContent",'file');	
+							});
+														
+							//팝업창 닫기
+							$("#backgroundPopup").click(function(){
+								disablePopup();
+							});
+							$("#popupContactClose").click(function(){
+								disablePopup();
+							});
+				}
+			});	
+		}					 		
+			
+       	function loadPopup(){  
+			if(popupStatus==0){  
+			$("#backgroundPopup").css({  
+				//"opacity": "0.7"  
+			});  
+			
+			$("#backgroundPopup").fadeIn("slow");  
+			$("#popupContact").fadeIn("slow");  
+			popupStatus = 1;  
+			}  
+		}  
+		
+		function disablePopup(){
+			if(popupStatus == 1){
+				$("#popupContent").remove();
+				$("#backgroundPopup").fadeOut("slow");
+				$("#popupContact").fadeOut("slow");  
+				$('#puContent h1').remove();
+				popupStatus = 0;
+			}
+		}
+	    
+		function centerPopup(){
+			var windowWidth = document.documentElement.clientWidth;  
+			var windowHeight = document.documentElement.clientHeight;  
+			//var popupHeight = $("#popupContact").height();  
+			var popupHeight = 500;
+			var popupWidth = $("#popupContact").width();  
+			
+			$("#popupContact").css({  
+				"position": "absolute",  
+				"top": (windowHeight/2-(popupHeight/2 + 100)),  
+				"left": windowWidth/2-popupWidth/2  
+			});  
+  
+			$("#backgroundPopup").css({  
+				"height": windowHeight
+			});  
+		}  
+		
+		$('#titleDiv1').bind('click',function(){
+			$('.rootDiv').attr('data-fullscreen',true);
+		})
+		
+ </script>
+</body>
+</html>

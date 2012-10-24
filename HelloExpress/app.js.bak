@@ -1,0 +1,75 @@
+var express = require('express');
+var routes = require('./routes');
+var fs = require('fs');
+
+var app = module.exports = express.createServer();
+
+app.configure(function(){
+	app.use(express.bodyParser());
+	app.use(express.methodOverride());
+	app.use(app.router);
+	app.use(express.static(__dirname +'/public'));
+});
+
+app.configure('development',function(){
+	app.use(express.errorHandler({dumpExceptions : true, showStack: true }));
+});
+
+app.configure('production', function(){
+	app.use(express.errorHandler());
+});
+
+var dirName = [];
+var fileName = [];
+var dirCount = 0;
+var fileCount = 0;
+
+app.configure(function(){
+	app.get('/',function(req,res,next){
+		fs.readFile('mobile.html','utf-8',function(error,data){
+			res.writeHead(200,{'Content-Type':'text/html'});
+			res.end(data);
+		});
+	});
+
+	app.post('/:list',function(req,res){
+		
+		var data = req.param('path');
+		var fileArr = new Array();
+console.log("data : " + data);
+		fs.readdir(data,function(error,filenames){
+			if(filenames.length > 0 ) {
+				for(var i =0 ; i < filenames.length; i++){
+					if(fs.statSync(data+"\\"+ filenames[i]).isDirectory()){
+						dirName[dirCount] = filenames[i];
+						dirCount++;
+					}else {
+						if(filenames[i].indexOf(".mp3") != -1 || filenames[i].indexOf(".wav") != -1 || filenames[i].indexOf(".mid") != -1 ){
+							fileName[fileCount] = filenames[i];
+							fileCount++;					
+						}
+					}
+				}
+				
+				for(var z = 0; z < fileName.length; z++){
+					if(fileName[z].length > 18){
+						var str = fileName[z];
+						var a = str.substring(0,str.length/2+6);
+						var b = str.substring(str.length/2+6, str.length);
+						fileName[z] = a +" <br> "+ b;
+					}
+				}
+				res.send({'dir':dirName,'file' : fileName});
+				dirName = [];
+				fileName = [];
+				dirCount = fileCount =0;
+			}else {
+				res.send('');
+			}
+		});
+	});
+});
+	
+app.listen(1004);
+
+console.log("Express Server listening on port 1004");
